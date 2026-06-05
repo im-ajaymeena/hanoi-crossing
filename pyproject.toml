@@ -1,0 +1,22 @@
+[project]
+name = "hanoi-crossing"
+version = "0.1.0"
+description = "Hanoi Crossing: a two-player Tower-of-Hanoi variant"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = []
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/hanoi_crossing"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+]
