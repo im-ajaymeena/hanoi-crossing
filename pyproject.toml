@@ -10,6 +10,7 @@ dependencies = [
 
 [project.scripts]
 hanoi-replay  = "hanoi_crossing.cli.replay:main"
+hanoi-random  = "hanoi_crossing.cli.random_play:main"
 
 [build-system]
 requires = ["hatchling"]
