@@ -4,7 +4,9 @@ version = "0.1.0"
 description = "Hanoi Crossing: a two-player Tower-of-Hanoi variant"
 readme = "README.md"
 requires-python = ">=3.11"
-dependencies = []
+dependencies = [
+    "pyyaml>=6.0",
+]
 
 [build-system]
 requires = ["hatchling"]
