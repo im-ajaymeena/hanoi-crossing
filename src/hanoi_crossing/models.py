@@ -74,8 +74,8 @@ class GameState:
     Pole stacks are stored bottom-to-top (index 0 = largest disk).
     """
 
-    poles: dict[str, list[int]]       # pole_id -> disk stack
-    hands: dict[str, Optional[int]]   # player -> held disk size, or None
+    poles: dict[str, list[int]]       # pole_id → disk stack
+    hands: dict[str, Optional[int]]   # player → held disk size, or None
     winner: Optional[str] = None
     turn: int = 0
 
@@ -85,4 +85,11 @@ class GameState:
             hands=dict(self.hands),
             winner=self.winner,
             turn=self.turn,
+        )
+
+    def board_key(self) -> tuple:
+        """Hashable board position, excluding turn/winner — used as a transposition table key."""
+        return (
+            tuple(sorted((pole, tuple(stack)) for pole, stack in self.poles.items())),
+            (self.hands.get(Player.A), self.hands.get(Player.B)),
         )
