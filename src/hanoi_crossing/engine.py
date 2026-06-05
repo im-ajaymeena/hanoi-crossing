@@ -2,14 +2,16 @@
 HanoiCrossing game engine.
 
 Public API:
-  initial_state()            -> starting GameState
-  legal_moves(state, player) -> all valid moves from this position
-  apply(state, player, move) -> new state; original is never mutated
-  is_over(state)             -> bool
+  initial_state()            → starting GameState
+  legal_moves(state, player) → all valid moves from this position
+  apply(state, player, move) → new state; original is never mutated
+  is_over(state)             → bool
+  find_shortest_win(player)  → shortest move sequence to win (opponent skips)
 """
 
 from __future__ import annotations
 
+from collections import deque
 from typing import Optional
 
 from .models import Action, GameState, Move, Player, GOAL_POLE, VISIBLE
@@ -19,22 +21,22 @@ class HanoiCrossing:
     """
     Game engine for Hanoi Crossing.
 
-    A gets odd disks (1, 3, 5, ...) on pole 1a, must move them all to 3a.
-    B gets even disks (2, 4, 6, ...) on pole 1b, must move them all to 3b.
+    A gets odd disks (1, 3, 5, …) on pole 1a, must move them all to 3a.
+    B gets even disks (2, 4, 6, …) on pole 1b, must move them all to 3b.
     Pole 2 is shared — both players can see and use it.
     """
 
     def __init__(self, n: int) -> None:
         if n < 1:
-            raise ValueError(f"n must be >= 1, got {n}")
+            raise ValueError(f"n must be ≥ 1, got {n}")
         self.n = n
 
-    # -- Public API ---------------------------------------------------------------
+    # ── Public API ────────────────────────────────────────────────────────────
 
     def initial_state(self) -> GameState:
         """Starting position: A's odd disks on 1a, B's even disks on 1b."""
-        a_disks = list(range(2 * self.n - 1, 0, -2))   # [2n-1, ..., 3, 1]
-        b_disks = list(range(2 * self.n, 0, -2))         # [2n,   ..., 4, 2]
+        a_disks = list(range(2 * self.n - 1, 0, -2))   # [2n-1, …, 3, 1]
+        b_disks = list(range(2 * self.n, 0, -2))         # [2n,   …, 4, 2]
         return GameState(
             poles={"1a": a_disks, "2": [], "3a": [], "1b": b_disks, "3b": []},
             hands={Player.A: None, Player.B: None},
@@ -81,7 +83,34 @@ class HanoiCrossing:
     def is_over(self, state: GameState) -> bool:
         return state.winner is not None
 
-    # -- Private helpers ----------------------------------------------------------
+    def find_shortest_win(
+        self, player: Player
+    ) -> Optional[list[tuple[Player, Move]]]:
+        """
+        BFS to find the fewest moves for player to win, assuming the opponent
+        always skips. Uses board_key() as a transposition table to handle cycles.
+        """
+        initial = self.initial_state()
+        queue: deque[tuple[GameState, list]] = deque([(initial, [])])
+        visited: set[tuple] = {initial.board_key()}
+
+        while queue:
+            state, path = queue.popleft()
+
+            for move in self.legal_moves(state, player):
+                next_state = self.apply(state, player, move)
+
+                if next_state.winner == player:
+                    return path + [(player, move)]
+
+                key = next_state.board_key()
+                if key not in visited:
+                    visited.add(key)
+                    queue.append((next_state, path + [(player, move)]))
+
+        return None
+
+    # ── Private helpers ───────────────────────────────────────────────────────
 
     def _is_legal(self, state: GameState, player: Player, move: Move) -> bool:
         """Direct O(1) validation — avoids generating all legal moves just to check one."""
@@ -112,7 +141,7 @@ class HanoiCrossing:
         return None
 
     def _has_won(self, state: GameState, player: Player) -> bool:
-        """Win = hand empty, goal pole non-empty, all other visible poles empty."""
+        """Win = hand empty, goal pole non-empty, all other visible poles empty (including shared pole 2)."""
         if state.hands[player] is not None:
             return False
         goal = GOAL_POLE[player]
