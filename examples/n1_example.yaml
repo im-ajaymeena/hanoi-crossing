@@ -1,0 +1,8 @@
+# The canonical N=1 walkthrough.
+# Turn order: [A, B, A]
+# A wins on turn 3.
+n: 1
+turns:
+  - [A, lift, 1a]   # A lifts disk 1 from pole 1a
+  - [B, lift, 1b]   # B lifts disk 2 from pole 1b
+  - [A, place, 3a]  # A places disk 1 on pole 3a → A wins
