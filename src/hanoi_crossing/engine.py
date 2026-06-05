@@ -1,8 +1,10 @@
-"""HanoiCrossing game engine — work in progress."""
+"""HanoiCrossing game engine."""
 
 from __future__ import annotations
 
-from .models import GameState, Move, Player, VISIBLE
+from typing import Optional
+
+from .models import Action, GameState, Move, Player, GOAL_POLE, VISIBLE
 
 
 class HanoiCrossing:
@@ -45,3 +47,44 @@ class HanoiCrossing:
                     moves.append(Move.place(pole))
 
         return moves
+
+    def apply(self, state: GameState, player: Player, move: Move) -> GameState:
+        """Apply move and return the new state. Illegal moves waste the turn."""
+        new = state.copy()
+        new.turn += 1
+
+        if not self._is_legal(state, player, move):
+            return new
+
+        match move.action:
+            case Action.LIFT:
+                new.hands[player] = new.poles[move.pole].pop()
+            case Action.PLACE:
+                new.poles[move.pole].append(new.hands[player])
+                new.hands[player] = None
+            case Action.SKIP:
+                pass
+
+        new.winner = self._find_winner(new)
+        return new
+
+    def is_over(self, state: GameState) -> bool:
+        return state.winner is not None
+
+    # Naive O(n) check — will optimise later
+    def _is_legal(self, state: GameState, player: Player, move: Move) -> bool:
+        return move in self.legal_moves(state, player)
+
+    def _find_winner(self, state: GameState) -> Optional[str]:
+        for player in Player:
+            if self._has_won(state, player):
+                return player
+        return None
+
+    def _has_won(self, state: GameState, player: Player) -> bool:
+        if state.hands[player] is not None:
+            return False
+        goal = GOAL_POLE[player]
+        if not state.poles[goal]:
+            return False
+        return all(not state.poles[p] for p in VISIBLE[player] if p != goal)
