@@ -34,7 +34,7 @@ def main() -> None:
 
     for turn_num in range(1, max_turns + 1):
         player = rng.choice([Player.A, Player.B])
-        move   = rng.choice(engine.legal_moves(state, player))
+        move   = rng.choice(sorted(engine.legal_moves(state, player), key=str))
 
         state = engine.apply(state, player, move)
         print(f"Turn {turn_num:4d} · Player {player} → {move}")
