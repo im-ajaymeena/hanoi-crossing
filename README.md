@@ -1,10 +1,14 @@
 # Hanoi Crossing
 
-A two-player competitive Tower of Hanoi variant, implemented as a Python game engine with two CLI frontends.
+A two-player take on the Tower of Hanoi. Each player has their own Hanoi to solve, but they share the middle pole, so it's not just a race. You can park a disk on the shared pole, block the other player, or straight up steal a disk they left sitting there.
 
-## Game Rules
+I started messing with this after reading some combinatorial game theory papers on competitive Hanoi (Chappelon and Matsuura have a nice one on a two-player version with a "no re-move" rule, and there are the usual CGT surveys on partizan games). None of them set it up quite like this, with a shared pole and each player only seeing half the board, so I figured I'd build an engine and see how it actually plays.
 
-Two players (A and B) each have a private set of poles and share a middle pole (pole 2):
+It's a small thing. Python, a game engine, two CLIs to drive it.
+
+## The rules
+
+Two players, A and B. Each has their own pole 1 and pole 3, and they share pole 2 in the middle:
 
 ```
         1a
@@ -14,82 +18,79 @@ Two players (A and B) each have a private set of poles and share a middle pole (
         3a
 ```
 
-- **Player A** sees poles `1a`, `2`, `3a` and starts with odd disks (1, 3, 5, …) on `1a`.
-- **Player B** sees poles `1b`, `2`, `3b` and starts with even disks (2, 4, 6, …) on `1b`.
-- Standard Hanoi rule: a disk may only rest on an empty pole or a strictly larger disk.
+A sees `1a`, `2`, `3a` and starts with the odd disks (1, 3, 5, …) on `1a`. B sees `1b`, `2`, `3b` and starts with the even disks (2, 4, 6, …) on `1b`. Normal Hanoi placement applies: a disk only goes on an empty pole or on a bigger one.
 
-On each turn a player does exactly **one** action:
+On your turn you do exactly one thing:
 
-| Action | Description |
-|--------|-------------|
-| `lift <pole>` | Pick up the top disk from a visible pole (hand must be empty) |
-| `place <pole>` | Put the held disk onto a visible pole (must fit) |
-| `skip` | Do nothing |
+- `lift <pole>` — take the top disk off a pole you can see (only if your hand's empty)
+- `place <pole>` — drop the disk you're holding onto a pole (has to fit)
+- `skip` — pass
 
-An **illegal** action wastes the turn — the board is unchanged.
+If you try something illegal, nothing happens and you've wasted your turn.
 
-**Win condition:** hand is empty AND among a player's visible poles, only their goal pole (`3a` for A, `3b` for B) has disks.
+You win when your hand is empty and, of the poles you can see, only your goal pole (`3a` for A, `3b` for B) has disks on it. The catch is that pole 2 has to be clear too, and since both players want to use it, that's where most of the tension comes from.
 
-> The shared pole 2 must be clear for either player to win — this is the core strategic tension.
+## Decisions I had to make
 
-## Design Decisions
+The rules leave a few things open, so here's what I went with and why:
 
-| Decision | Choice | Rationale |
-|----------|--------|-----------|
-| **State immutability** | `apply()` always returns a new `GameState`, never mutates the original | Makes replay, testing, and future AI search trivial |
-| **Illegal move handling** | State unchanged, turn counter advances | Faithful to spec; replay files can include intentional illegal moves as test cases |
-| **Win check timing** | After every `apply()`, both players are checked | A move by B could clear pole 2 and simultaneously trigger A's win condition |
-| **Simultaneous wins** | First player found wins (A before B) | Rare edge case; documented as a tie-breaking convention |
-| **Turn order** | Fully external — provided as a list, not assumed alternating | Matches the spec: "The engine must not assume any particular turn-order pattern" |
-| **Disk representation** | Integer size; stacks stored bottom-to-top | Natural fit for the Hanoi rule (`stack[-1]` is always the top) |
-| **Input format** | YAML with compact `[player, action, pole]` rows | Human-readable and diff-friendly for git history |
+- **States are immutable.** `apply()` hands back a new `GameState` instead of mutating in place. Made replay and the BFS solver way easier to reason about, and tests don't step on each other.
+- **Illegal moves just burn the turn**, they don't raise. That sounds lazy but it's deliberate, it means a replay file can include bad moves on purpose and still be a valid test fixture.
+- **Win is checked for both players after every move**, not just whoever just went. B clearing pole 2 can hand A the win on B's turn, so you have to look at both.
+- **If both somehow win at once, A wins.** It basically never happens, but I didn't want it undefined.
+- **Turn order is passed in**, not assumed. The engine doesn't care if it's A, B, A, B or some lopsided sequence. You give it the order.
+- **Disks are just ints, stacks are bottom-to-top lists.** So `stack[-1]` is the top and the whole Hanoi rule is `stack[-1] > disk`.
+- **Replay files are YAML**, with rows like `[player, action, pole]`. Easy to read and diffs stay clean in git.
 
-## Project Layout
+## Layout
 
 ```
 src/hanoi_crossing/
-├── models.py       # Pure data: Player, Action, Move, GameState
-├── engine.py       # HanoiCrossing engine — initial_state, legal_moves, apply, is_over
+├── models.py       # the data: Player, Action, Move, GameState
+├── engine.py       # the engine: initial_state, legal_moves, apply, is_over
 └── cli/
-    ├── replay.py       # hanoi-replay: replay pre-recorded moves
-    └── random_play.py  # hanoi-random: both players make random valid moves
+    ├── replay.py       # hanoi-replay: run a pre-recorded game
+    └── random_play.py  # hanoi-random: both sides play random valid moves
 tests/
-└── test_engine.py  # Engine unit tests (no CLI involved)
+└── test_engine.py
 examples/
-└── n1_example.yaml # N=1 walkthrough 
+└── *.yaml          # a few sample games
 ```
 
-Core engine (`models.py` + `engine.py`): ~150 lines — well under the 500-line limit.
+`models.py` plus `engine.py` is about 150 lines. I wanted to keep the core tiny.
 
-## Setup
+## Running it
 
 ```bash
 uv sync
-uv run pytest          # run tests
+uv run pytest
 ```
 
-## Usage
-
-### Replay mode
+### Replay a game
 
 ```bash
 uv run hanoi-replay examples/n1_example.yaml
 ```
 
-Replay file format:
+The file looks like this:
+
 ```yaml
 n: 1
 turns:
   - [A, lift, 1a]   # [player, action, pole]
   - [B, lift, 1b]
   - [A, place, 3a]
-  - [A, skip]       # pole omitted for skip
+  - [A, skip]       # leave the pole off for skip
 ```
 
-### Random-play mode
+### Watch a random game
 
 ```bash
 uv run hanoi-random             # n=2, up to 500 turns
 uv run hanoi-random 3           # n=3
-uv run hanoi-random 2 1000 42   # n=2, max 1000 turns, seed=42
+uv run hanoi-random 2 1000 42   # n=2, max 1000 turns, seed 42 so it's repeatable
 ```
+
+## Stuff I read / left in
+
+If you want to dig further: Chappelon and Matsuura's work on two-player Tower of Hanoi, and the CGT surveys on partizan games. There's also a `find_shortest_win()` in `engine.py` (BFS, uses `board_key()` as a transposition table) that I used to check shortest-win lengths against what the theory predicts. It's not wired into the CLIs, it was mostly for my own sanity checking.

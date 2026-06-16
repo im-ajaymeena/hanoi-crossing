@@ -3,8 +3,8 @@ Random-play CLI — both players make random valid moves until someone wins
 or the turn limit is reached.
 
 The turn order itself is also randomised by default (each step independently
-picks A or B with equal probability), satisfying the requirement that
-the engine must not assume any fixed pattern.
+picks A or B with equal probability) — the engine never assumes a fixed
+turn-order pattern.
 
 Usage:
     hanoi-random              # n=2, up to 500 turns, random seed

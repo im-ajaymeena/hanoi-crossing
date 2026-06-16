@@ -1,0 +1,18 @@
+# Strategic Contention (N=2)
+# Demonstrates "disk theft" and blocking.
+# B moves A's disk to their own goal pole to prevent A from winning.
+n: 2
+turns:
+  - [A, lift, 1a]   # A picks up disk 1
+  - [A, place, "2"]    # A parks disk 1 on shared pole 2
+  - [B, lift, 1b]   # B picks up disk 2
+  - [B, place, 3b]   # B moves disk 2 to goal
+  - [B, lift, "2"]    # B STEALS disk 1 from shared pole 2!
+  - [B, place, 3b]   # B puts disk 1 on top of disk 2 on pole 3b
+  - [A, lift, 1a]   # A picks up disk 3
+  - [A, place, 3a]   # A moves 3 to goal
+  # A is now stuck: pole 1a is empty, 2 is empty, but disk 1 is missing!
+  # A cannot win because their goal pole 3a does not contain all their disks (1 is on 3b).
+  - [A, skip]
+  - [B, lift, 1b]   # B picks up disk 4
+  - [B, place, "2"]    # B parks 4 on pole 2, blocking A's potential recovery

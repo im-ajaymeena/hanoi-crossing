@@ -1,0 +1,22 @@
+# Large Scale Opening (N=8)
+# Shows the first 20 turns of a perfect play for Player A.
+# Total game would be 510 turns (2 * (2^8 - 1)).
+n: 8
+turns:
+  - [A, lift, 1a]   # Disk 1
+  - [A, place, "2"]
+  - [A, lift, 1a]   # Disk 3
+  - [A, place, 3a]
+  - [A, lift, "2"]    # Disk 1
+  - [A, place, 3a]
+  - [A, lift, 1a]   # Disk 5
+  - [A, place, "2"]
+  - [A, lift, 3a]   # Disk 1
+  - [A, place, 1a]
+  - [A, lift, 1a]   # Disk 1
+  - [A, place, "2"]
+  - [A, lift, 1a]
+  - [A, place, 3a]
+  - [A, lift, "2"]
+  - [A, place, 3a]
+  - [A, skip]       # End of snippet
